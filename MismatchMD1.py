@@ -196,3 +196,137 @@ if __name__ == "__main__":
         print(f"\n** {source}: **")
         for i, item in enumerate(info_list, 1):
             print(f"Result {i}: \n{item}\n")
+
+
+
+
+
+
+# -----------------------------------------
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
+from textblob import TextBlob
+import re
+
+def extract_clean_text(results, source_type="google"):
+    clean_texts = []
+    for entry in results:
+        if source_type == "google":
+            match = re.search(r"\[From: (.*?)\](.*?)\[URL:", entry, re.DOTALL)
+            if match:
+                content = match.group(2).strip().replace('\n', ' ')
+                clean_texts.append(content)
+
+        elif source_type == "pubmed":
+            match = re.search(r"\[From: (.*?)\]", entry)
+            if match:
+                content = match.group(1).strip()
+                clean_texts.append(content)
+    return clean_texts
+
+# Call the function to get the results and define the variables
+# You might want to change the test symptoms here
+test_symptoms = "fever, cough" # Or get input again if needed
+results = get_symptom_results(test_symptoms)
+
+# Extract the lists from the results dictionary
+google_diagnoses = results.get("Google Search Results", [])
+pubmed_diagnoses = results.get("Medical Source (PubMed) Results", [])
+
+
+google_texts = extract_clean_text(google_diagnoses, source_type="google")
+pubmed_texts = extract_clean_text(pubmed_diagnoses, source_type="pubmed")
+
+
+# Topic Modelling
+def lda_topic_modeling(docs, n_topics=3):
+    # Ensure there are documents to process
+    if not docs:
+        print("No documents to process for topic modeling.")
+        return []
+
+    vectorizer = CountVectorizer(stop_words='english', max_df=0.95, min_df=1)
+    try:
+        X = vectorizer.fit_transform(docs)
+    except ValueError as e:
+        # Handle case where no words are found after stop word removal
+        print(f"Could not perform topic modeling: {e}")
+        return []
+
+    lda = LatentDirichletAllocation(n_components=n_topics, random_state=42)
+    lda.fit(X)
+    feature_names = vectorizer.get_feature_names_out()
+    topics = []
+    for topic_weights in lda.components_:
+        # Get top 10 keywords for each topic
+        top_keywords = [feature_names[i] for i in topic_weights.argsort()[-10:]]
+        topics.append(top_keywords)
+    return topics
+
+# Define the missing plotting function
+def plot_keywords_bar(topics, source_name):
+    """
+    Plots bar charts for keywords in each topic.
+    """
+    if not topics:
+        print(f"No topics to plot for {source_name}.")
+        return
+
+    print(f"\n--- Top Keywords for {source_name} Topics ---")
+    for i, topic in enumerate(topics):
+        print(f"Topic {i+1}: {', '.join(topic)}") # Print keywords for inspection
+        # Create a simple bar plot for keywords (assuming equal weight for simplicity from LDA output)
+        plt.figure(figsize=(10, 4))
+        plt.barh(range(len(topic)), [1] * len(topic), tick_label=topic) # Plot keywords with placeholder values
+        plt.yticks(rotation=0) # Ensure vertical labels
+        plt.title(f"{source_name} - Topic {i+1} Keywords")
+        plt.xlabel("Keyword Presence (Placeholder)") # Indicate that bar height isn't actual weight
+        plt.tight_layout()
+        plt.show()
+
+
+google_topics = lda_topic_modeling(google_texts)
+pubmed_topics = lda_topic_modeling(pubmed_texts)
+
+# Only attempt to plot if there are topics
+if google_topics:
+    plot_keywords_bar(google_topics, "Google")
+if pubmed_topics:
+    plot_keywords_bar(pubmed_topics, "PubMed")
+
+
+# Reliability
+def estimate_reliability(results, source_type):
+    data = []
+    for res in results:
+        title_match = re.search(r"\[From: (.*?)\]", res)
+        title = title_match.group(1) if title_match else "Unknown"
+
+        authority = 1 if source_type == "Medical Source (PubMed)" else 0.2 # Adjusted source type check
+        citation = 1 if "journal" in res.lower() else 0
+
+        data.append({
+            'Source': title[:40] + "...",
+            'Authority': authority,
+            'Citation': citation
+        })
+    return pd.DataFrame(data)
+
+# Ensure that google_diagnoses and pubmed_diagnoses are lists
+google_df = estimate_reliability(google_diagnoses, "Google Search Results") # Pass the full source name
+pubmed_df = estimate_reliability(pubmed_diagnoses, "Medical Source (PubMed) Results") # Pass the full source name
+
+# Only attempt to concatenate if dataframes are not empty
+if not google_df.empty or not pubmed_df.empty:
+    combined_df = pd.concat([google_df, pubmed_df]).set_index('Source')
+
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(combined_df, annot=True, cmap="YlGnBu", cbar=True)
+    plt.title("Reliability Assessment Heatmap")
+    plt.tight_layout()
+    plt.show()
+else:
+    print("No data available to generate reliability heatmap.")
