@@ -1,6 +1,6 @@
 # app.py
 import streamlit as st
-from code_with_visualization import get_symptom_results # This line imports your function from MismatchMD1.py
+from MismatchMD1 import get_symptom_results # This line imports your function from MismatchMD1.py
 
 st.set_page_config(page_title="Symptom Checker", layout="centered")
 
