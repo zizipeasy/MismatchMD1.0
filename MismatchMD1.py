@@ -5,6 +5,8 @@ import requests
 from bs4 import BeautifulSoup
 from googlesearch import search
 import time
+import json
+import requests
 
 class MedicalMismatchDetector:
 
@@ -55,47 +57,42 @@ class MedicalMismatchDetector:
     #     print("\nAnalyzing your symptoms...\n")
     #     return user_symptoms
 
+    # Moved get_diagnosis_from_google inside the class
     @staticmethod # Add this decorator
     def get_diagnosis_from_google(symptoms):
         self_google_diagnoses = []
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                          'AppleWebKit/537.36 (KHTML, like Gecko) '
-                          'Chrome/91.0.4472.124 Safari/537.36'
-        }
+
+        API_KEY = "AIzaSyDUGoNMJu0LGUC-L5v8xeToYnSxrRWMIcA"
+        SEARCH_ENGINE_ID = "75674d359f1344d0d"
+        query = f"self {symptoms} diagnosis"
+
         try:
-            search_query = f"self {symptoms} diagnosis"
+            for start in range(1, 31, 10):  # Fetch 20 results in batches of 10
+                url = f"https://www.googleapis.com/customsearch/v1?key={API_KEY}&cx={SEARCH_ENGINE_ID}&q={query}&start={start}"
 
-            for i, url in enumerate(search(search_query, num=30, stop=30, pause=2)):
-                try:
-                    response = requests.get(url, headers=headers, timeout=5)
-                    response.raise_for_status()
-                    soup = BeautifulSoup(response.content, "html.parser")
-                    source_title = soup.title.string.strip() if soup.title else "Untitled"
+                response = requests.get(url, timeout=10)
+                response.raise_for_status()
+                data = response.json()
 
-                    for p in soup.find_all("p"):
-                        text = p.get_text().strip()
-                        if "diagnosis" in text.lower() or "condition" in text.lower():
-                            formatted_text = f"[From: {source_title}]\n{text[:500]}...\n[URL: {url}]" # Added ... for truncation
-                            self_google_diagnoses.append(formatted_text)
-                            # Only take one relevant paragraph per URL to avoid too much text
-                            break
+                for item in data.get("items", []):
+                    title = item.get("title", "Untitled")
+                    snippet = item.get("snippet", "")
+                    link = item.get("link", "")
 
-                except requests.exceptions.RequestException as req_e:
-                    # print(f"  Network/HTTP Error processing {url}: {req_e}")
-                    continue
-                except Exception as e:
-                    # print(f"  Error processing {url}: {str(e)}")
-                    continue
-                time.sleep(1) # Small delay to be polite to Google
+                    if "diagnosis" in snippet.lower() or "condition" in snippet.lower():
+                        formatted_text = f"[From: {title}]\n{snippet[:500]}...\n[URL: {link}]"
+                        self_google_diagnoses.append(formatted_text)
+
+                time.sleep(1)
 
         except Exception as e:
-            # print(f"Search error: {str(e)}")
-            pass # Suppress general search errors for cleaner output
+            pass  # Suppress errors in demo
 
         unique_results = MedicalMismatchDetector.deduplicate_results(self_google_diagnoses)
-        return unique_results[:5] # Return fewer for brevity in demo
+        return unique_results[:5]
 
+
+    # Moved get_diagnosis_from_pubmed inside the class
     @staticmethod # Add this decorator
     def get_diagnosis_from_pubmed(symptoms):
         self_pubmed_diagnoses = []
@@ -118,7 +115,7 @@ class MedicalMismatchDetector:
                 # print("No PubMed IDs found for the given symptoms.")
                 return [] # Return empty if no IDs
 
-            for article_id in id_list[:5]: # Reduced to top 5 for quicker demo
+            for article_id in id_list[:20]: # Reduced to top 5 for quicker demo
                 try:
                     summary_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
                     summary_params = {
@@ -158,6 +155,9 @@ class MedicalMismatchDetector:
         except Exception as e:
             # print(f"PubMed search error: {str(e)}")
             pass
+            
+        unique_results = MedicalMismatchDetector.deduplicate_results(self_pubmed_diagnoses)
+        return unique_results[:5]
 
         return self_pubmed_diagnoses
 
@@ -167,6 +167,7 @@ def get_symptom_results(user_symptoms):
     all_results = {}
 
     # Get Google results
+    # Now call the static method from the class
     google_diagnoses = MedicalMismatchDetector.get_diagnosis_from_google(user_symptoms)
     if google_diagnoses:
         all_results["Google Search Results"] = google_diagnoses
@@ -175,6 +176,7 @@ def get_symptom_results(user_symptoms):
 
 
     # Get PubMed results
+    # Now call the static method from the class
     pubmed_diagnoses = MedicalMismatchDetector.get_diagnosis_from_pubmed(user_symptoms)
     if pubmed_diagnoses:
         all_results["Medical Source (PubMed) Results"] = pubmed_diagnoses
