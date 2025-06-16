@@ -58,18 +58,20 @@ class MedicalMismatchDetector:
     @staticmethod # Add this decorator
     def get_diagnosis_from_google(symptoms):
         self_google_diagnoses = []
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                          'AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/91.0.4472.124 Safari/537.36'
+        }
         try:
             search_query = f"self {symptoms} diagnosis"
 
-            for i, url in enumerate(search(search_query, num=10, stop=10, pause=2)): # Reduced num/stop for quicker demo
-                # print(f"  Fetching: {url}") # For debugging
+            for i, url in enumerate(search(search_query, num=30, stop=30, pause=2)):
                 try:
-                    response = requests.get(url, timeout=5)
+                    response = requests.get(url, headers=headers, timeout=5)
                     response.raise_for_status()
-
                     soup = BeautifulSoup(response.content, "html.parser")
-
-                    source_title = soup.title.string if soup.title else "Untitled"
+                    source_title = soup.title.string.strip() if soup.title else "Untitled"
 
                     for p in soup.find_all("p"):
                         text = p.get_text().strip()
@@ -104,10 +106,10 @@ class MedicalMismatchDetector:
                 'db': 'pubmed',
                 'term': f"self {symptoms} diagnosis", # Corrected 'slef' to 'self'
                 'retmode': 'json',
-                'retmax': 10
+                'retmax': 20
             }
 
-            response = requests.get(base_url, params=params)
+            response = requests.get(base_url, params=params, timeout=10)
             response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
             data = response.json()
 
@@ -125,7 +127,7 @@ class MedicalMismatchDetector:
                         'retmode': 'json'
                     }
 
-                    summary_response = requests.get(summary_url, params=summary_params)
+                    summary_response = requests.get(summary_url, params=summary_params, timeout=10)
                     summary_response.raise_for_status()
                     summary_data = summary_response.json()
 
