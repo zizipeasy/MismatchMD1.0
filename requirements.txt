@@ -4,5 +4,3 @@ beautifulsoup4
 googlesearch-python
 matplotlib
 seaborn
-scikit-learn
-re
