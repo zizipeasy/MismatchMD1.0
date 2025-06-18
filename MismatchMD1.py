@@ -67,7 +67,7 @@ class MedicalMismatchDetector:
         query = f"self {symptoms} diagnosis"
 
         try:
-            for start in range(1, 31, 10):  # Fetch 20 results in batches of 10
+            for start in range(1, 41, 10):  # Fetch 30 results in batches of 10
                 url = f"https://www.googleapis.com/customsearch/v1?key={API_KEY}&cx={SEARCH_ENGINE_ID}&q={query}&start={start}"
 
                 response = requests.get(url, timeout=10)
@@ -155,7 +155,7 @@ class MedicalMismatchDetector:
         except Exception as e:
             # print(f"PubMed search error: {str(e)}")
             pass
-            
+
         unique_results = MedicalMismatchDetector.deduplicate_results(self_pubmed_diagnoses)
         return unique_results[:5]
 
@@ -185,6 +185,115 @@ def get_symptom_results(user_symptoms):
 
     return all_results
 
+# Visualization part
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
+import re
+
+def extract_clean_text(results, source_type="google"):
+    clean_texts = []
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/91.0.4472.124 Safari/537.36"
+        )
+    }
+
+    for entry in results:
+        # Extract URL
+        match = re.search(r"\[URL: (.*?)\]", entry)
+        url = match.group(1).strip() if match else None
+
+        if url:
+            try:
+                response = requests.get(url, headers=headers, timeout=8)
+                response.raise_for_status()
+                soup = BeautifulSoup(response.content, "html.parser")
+
+                # Extract parapraphs
+                paragraphs = soup.find_all('p')
+                page_text = " ".join(p.get_text() for p in paragraphs)
+
+                # Clean text
+                clean_text = re.sub(r'\s+', ' ', page_text.strip())
+
+                if len(clean_text) > 100:
+                    clean_texts.append(clean_text)
+
+            except Exception as e:
+                continue
+
+    return clean_texts
+
+def lda_topic_modeling(docs, n_topics=3):
+    vectorizer = CountVectorizer(stop_words='english', max_df=0.95, min_df=1)
+    X = vectorizer.fit_transform(docs)
+    lda = LatentDirichletAllocation(n_components=n_topics, random_state=42)
+    lda.fit(X)
+    feature_names = vectorizer.get_feature_names_out()
+    topics = []
+    for topic_weights in lda.components_:
+        top_keywords = [feature_names[i] for i in topic_weights.argsort()[-10:]]
+        topics.append(top_keywords)
+    return topics
+
+def plot_keywords_bar(topics, label_prefix):
+    keywords_flat = [kw for topic in topics for kw in topic]
+    keywords_series = pd.Series(keywords_flat)
+    top_keywords = keywords_series.value_counts().nlargest(15)
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x=top_keywords.values, y=top_keywords.index, palette="viridis")
+    plt.title(f"{label_prefix} Topic Keyword Frequency")
+    plt.xlabel("Frequency")
+    plt.tight_layout()
+    plt.show()
+
+def estimate_reliability(results, source_type):
+    data = []
+    for res in results:
+        title_match = re.search(r"\[From: (.*?)\]", res)
+        title = title_match.group(1) if title_match else "Unknown"
+
+        authority = 1 if source_type.lower() == "pubmed" else 0.2
+        citation = 1 if "journal" in res.lower() else 0
+
+        data.append({
+            'Source': title[:40] + "...",
+            'Authority': authority,
+            'Citation': citation
+        })
+    return pd.DataFrame(data)
+
+def visualize_symptom_analysis(results_dict):
+    google_diagnoses = results_dict.get("Google Search Results", [])
+    pubmed_diagnoses = results_dict.get("Medical Source (PubMed) Results", [])
+
+    # Skip if placeholder message present
+    google_texts = extract_clean_text(google_diagnoses, source_type="google") if "No relevant" not in google_diagnoses[0] else []
+    pubmed_texts = extract_clean_text(pubmed_diagnoses, source_type="pubmed") if "No relevant" not in pubmed_diagnoses[0] else []
+
+    if google_texts:
+        google_topics = lda_topic_modeling(google_texts)
+        plot_keywords_bar(google_topics, "Google")
+    if pubmed_texts:
+        pubmed_topics = lda_topic_modeling(pubmed_texts)
+        plot_keywords_bar(pubmed_topics, "PubMed")
+
+    # Reliability
+    google_df = estimate_reliability(google_diagnoses, "google")
+    pubmed_df = estimate_reliability(pubmed_diagnoses, "pubmed")
+    combined_df = pd.concat([google_df, pubmed_df]).set_index("Source")
+
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(combined_df, annot=True, cmap="YlGnBu", cbar=True)
+    plt.title("Reliability Assessment Heatmap")
+    plt.tight_layout()
+    plt.show()
+
 # Modified __main__ block for local testing
 if __name__ == "__main__":
     print("Running MismatchMD1.py directly for testing:")
@@ -196,3 +305,5 @@ if __name__ == "__main__":
         print(f"\n** {source}: **")
         for i, item in enumerate(info_list, 1):
             print(f"Result {i}: \n{item}\n")
+
+    visualize_symptom_analysis(results)
