@@ -63,9 +63,9 @@ class MedicalMismatchDetector:
 
         # API key and Search Engine ID for Google Custom Search.
         # NOTE: For production, secure storage of API keys (e.g., environment variables) is recommended.
-        API_KEY = "AIzaSyDUGoNMJu0LGUC-L5v8xeToYnSxrRWMIcA"
+        API_KEY = "AIzaSyBIwXzA6O2MV3ggjUeQE844bQsZ0TOFnzw"
         SEARCH_ENGINE_ID = "75674d359f1344d0d"
-        query = f"self {symptoms} diagnosis"
+        query = f"{symptoms}"
 
         try:
             # Iterate to fetch multiple pages of results (up to 30 results in batches of 10).
@@ -107,7 +107,7 @@ class MedicalMismatchDetector:
 
         # Deduplicate the fetched results and return the top 5 unique entries.
         unique_results = MedicalMismatchDetector.deduplicate_results(self_google_diagnoses)
-        return unique_results[:5]
+        return unique_results[:10]
 
     @staticmethod
     def get_diagnosis_from_pubmed(symptoms):
@@ -121,9 +121,9 @@ class MedicalMismatchDetector:
             # Parameters for the PubMed search query.
             params = {
                 'db': 'pubmed', # Specify PubMed database.
-                'term': f"self {symptoms} diagnosis", # Search term.
+                'term': f"{symptoms}", # Search term.
                 'retmode': 'json', # Request JSON format for response.
-                'retmax': 20 # Request up to 20 article IDs.
+                'retmax': 30 # Request up to 30 article IDs.
             }
 
             # Send a GET request to PubMed ESearch.
@@ -187,7 +187,7 @@ class MedicalMismatchDetector:
 
         # Deduplicate the fetched results and return the top 5 unique entries.
         unique_results = MedicalMismatchDetector.deduplicate_results(self_pubmed_diagnoses)
-        return unique_results[:5]
+        return unique_results[:10]
 
 
 def get_symptom_results(user_symptoms):
