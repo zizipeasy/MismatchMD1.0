@@ -228,25 +228,7 @@ def extract_clean_text(results, source_type="google"):
             "Chrome/91.0.4472.124 Safari/537.36"
         )
     }
-    # Define common noise patterns to remove from scraped text.
-    # This includes URLs, common footers/headers, years, etc.
-    # Added common words that might appear frequently but are not medically relevant topics.
-  noise_patterns = [
-        r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', # URLs
-        r'www\.[a-zA-Z0-9\-\.]+\.(com|org|net|gov|edu|co|uk)', # More specific URLs like www.example.com
-        r'\b(?:copyright|privacy|terms|policy|contact|about us|home|blog|careers|site map)\b', # Common footer/header links
-        r'\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\b', # Month names
-        r'\b\d+\s*(?:day|days|week|weeks|month|months|year|years)\b', # Date/time references like "5 days"
-        r'\b(?:share|like|tweet|facebook|twitter|linkedin|pinterest|email|print)\b', # Social media/sharing words
-        r'\b(?:image|photo|video|gallery|figure|table|caption)\b', # Image/media related words
-        r'\b(?:latest|news|article|journal|study|research|patients|health|medical|doctors|read more|click here|find out more|view all)\b', # Common filler words
-        r'[^\w\s]', # Punctuation and special characters (non-word, non-space)
-        r'\b\d+\b', # Specifically targets whole numbers (e.g., "29", "1", "2023")
-    ]
-
-    # Combine all patterns into a single regex.
-    combined_noise_pattern = re.compile('|'.join(noise_patterns), re.IGNORECASE)
-
+    
     for entry in results:
         # Use regex to find the URL within the result string.
         match = re.search(r"\[URL: (.*?)\]", entry)
