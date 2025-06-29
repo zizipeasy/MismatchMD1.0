@@ -2,16 +2,16 @@
 import streamlit as st
 
 #Pull in the special tools we need from MismatchMD1.py.
-#get_symptom_results is like our digital detective, finding text-based search results.
-#visualize_symptom_analysis is our artist, creating cool charts and graphs.
+#get_symptom_results finds text-based search results.
+#visualize_symptom_analysis creates charts and graphs.
 from MismatchMD1 import get_symptom_results, visualize_symptom_analysis
 
-#---Streamlit Page Configuration---
+#Streamlit Page Configuration
 #Set the title that pops up in your browser tab when you visit the page.
-#Let's make the page layout "wide" so we have plenty of room for our exciting charts!
+#Page layout is "wide" so we have plenty of room for our charts.
 st.set_page_config(page_title="Symptom Checker", layout="wide")
 
-#Display the main, big title for our amazing application.
+#Displaying the main, big title for our application.
 st.title("MismatchMD")
 #Add a friendly little introduction to welcome our users.
 st.markdown("""
@@ -28,13 +28,13 @@ if user_symptom:
     #Show a mini-heading to confirm what symptoms we're looking up.
     st.subheader(f"Results for: **{user_symptom}**")
 
-    #Show a fun little spinning message to let the user know we're busy working behind the scenes,
-    #because getting all this info can take a moment!
+    #Show a spinning message to let the user know we're busy working behind the scenes,
+    #because getting all this info can takes some time lol 
     with st.spinner("Analyzing your symptoms and fetching data... This might take a moment."):
-        #Ask our MismatchMD1.py detective to go fetch those text search results for us.
+        #Asking MismatchMD1.py to go fetch those text search results for us.
         results = get_symptom_results(user_symptom)
 
-    #Now, let's see if our detective found anything!
+    #Now, let's see if it found anything.
     if results:
         st.markdown("---")
         st.subheader("📚Text-Based Search Results")
@@ -74,35 +74,35 @@ if user_symptom:
         st.subheader("📈Visualization of Findings")
         st.markdown("---")
 
-        #Now, let's ask our artist function from MismatchMD1.py to create some awesome charts.
+        #Now, let's ask our artist function from MismatchMD1.py to create charts.
         #This function will hand us back a collection of Matplotlib Figure objects.
         figures = visualize_symptom_analysis(results)
 
-        #Time to show off our beautiful charts using st.pyplot()!
+        #Showing off our charts using st.pyplot()
         #We'll check each plot to make sure it actually exists before trying to display it.
         if figures.get("Google Keywords"):
             st.markdown("####Google Search Topic Keywords")
-            st.pyplot(figures["Google Keywords"]) #Display the cool bar plot showing Google's topic keywords.
+            st.pyplot(figures["Google Keywords"]) 
             st.markdown("---")
         else:
             st.info("Insufficient Google search data for keyword analysis.")
 
         if figures.get("PubMed Keywords"):
             st.markdown("####PubMed Medical Article Topic Keywords")
-            st.pyplot(figures["PubMed Keywords"]) #Display the fascinating bar plot for PubMed keywords.
+            st.pyplot(figures["PubMed Keywords"])
             st.markdown("---")
         else:
             st.info("Insufficient PubMed data for keyword analysis.")
 
         if figures.get("Reliability Heatmap"):
             st.markdown("####Source Reliability Assessment")
-            st.pyplot(figures["Reliability Heatmap"]) #Display the colorful heatmap that shows how reliable our sources are.
+            st.pyplot(figures["Reliability Heatmap"]) 
             st.markdown("---")
         else:
             st.info("Insufficient data to generate reliability assessment heatmap.")
 
     else:
-        #Uh oh, if we didn't find any results at all, let's let the user know gently.
+        #If we didn't find any results at all, let's let the user know gently that the website failed.
         st.warning("No specific results found for this symptom. Please try a different symptom or consult a professional.")
 
 st.markdown("---")
