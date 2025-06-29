@@ -1,66 +1,66 @@
-# app.py
+#app.py
 import streamlit as st
 
-# Import the necessary functions from MismatchMD1.py.
-# get_symptom_results fetches the text-based search results.
-# visualize_symptom_analysis generates the Matplotlib figures for visualization.
+#Pull in the special tools we need from MismatchMD1.py.
+#get_symptom_results is like our digital detective, finding text-based search results.
+#visualize_symptom_analysis is our artist, creating cool charts and graphs.
 from MismatchMD1 import get_symptom_results, visualize_symptom_analysis
 
-# --- Streamlit Page Configuration ---
-# Set the page title that appears in the browser tab.
-# Set the layout to "wide" to utilize more screen space, which is good for displaying plots.
+#---Streamlit Page Configuration---
+#Set the title that pops up in your browser tab when you visit the page.
+#Let's make the page layout "wide" so we have plenty of room for our exciting charts!
 st.set_page_config(page_title="Symptom Checker", layout="wide")
 
-# Display the main title of the application.
+#Display the main, big title for our amazing application.
 st.title("MismatchMD")
-# Add a brief introductory markdown text.
+#Add a friendly little introduction to welcome our users.
 st.markdown("""
 Welcome to our basic symptom checker! Enter a symptom below and get information from various sources,
 along with a visual analysis of the findings.
 """)
 
-# Input field for the user to enter their medical symptoms.
-# 'placeholder' provides a hint to the user.
+#Create a spot for the user to type in their medical symptoms.
+#'placeholder' gives them a helpful hint of what to type.
 user_symptom = st.text_input("Enter your medical symptom here:", placeholder="e.g., fever, headache, cough")
 
-# This block executes only when the user has entered some text in the input field.
+#This whole section only springs into action once the user has typed something in the box.
 if user_symptom:
-    # Display a subheader indicating the symptoms being analyzed.
+    #Show a mini-heading to confirm what symptoms we're looking up.
     st.subheader(f"Results for: **{user_symptom}**")
 
-    # Display a spinner to indicate that the application is processing,
-    # as fetching data can take a moment.
+    #Show a fun little spinning message to let the user know we're busy working behind the scenes,
+    #because getting all this info can take a moment!
     with st.spinner("Analyzing your symptoms and fetching data... This might take a moment."):
-        # Call the function from MismatchMD1.py to get the text search results.
+        #Ask our MismatchMD1.py detective to go fetch those text search results for us.
         results = get_symptom_results(user_symptom)
 
-    # Check if any results were returned from the search functions.
+    #Now, let's see if our detective found anything!
     if results:
         st.markdown("---")
-        st.subheader("📚 Text-Based Search Results")
+        st.subheader("📚Text-Based Search Results")
 
-        # Use Streamlit columns to display Google and PubMed results side-by-side.
+        #We'll set up two columns side-by-side to neatly show results from Google and PubMed.
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown("#### Google Search Results")
-            # Get Google results; default to an empty list if not found.
+            st.markdown("####Google Search Results")
+            #Grab the Google results; if there aren't any, we'll just have an empty list.
             google_results = results.get("Google Search Results", [])
-            # Check if actual results exist and not just the "No relevant" message.
+            #Let's check if we actually got some real results, not just a "no relevant" message.
             if google_results and "No relevant" not in google_results[0]:
                 for i, item in enumerate(google_results, 1):
                     st.write(f"**Result {i}:**")
-                    # Use st.markdown to render the formatted text, which includes newlines and URLs.
+                    #We're using st.markdown here so our formatted text, including new lines and web links, looks just right.
                     st.markdown(item)
-                    st.markdown("---") # Add a separator after each result.
+                    st.markdown("---") #Add a little line to separate each result, making it easy to read.
             else:
                 st.info("No relevant Google results found.")
 
         with col2:
-            st.markdown("#### Medical Source (PubMed) Results")
-            # Get PubMed results; default to an empty list if not found.
+            st.markdown("####Medical Source (PubMed) Results")
+            #Fetch the PubMed results; again, an empty list if none are found.
             pubmed_results = results.get("Medical Source (PubMed) Results", [])
-            # Check if actual results exist.
+            #Double-check that we have actual results here too.
             if pubmed_results and "No relevant" not in pubmed_results[0]:
                 for i, item in enumerate(pubmed_results, 1):
                     st.write(f"**Result {i}:**")
@@ -69,42 +69,42 @@ if user_symptom:
             else:
                 st.info("No relevant PubMed results found.")
 
-        # Add some vertical spacing before the visualization section.
+        #Add a little empty space here to make our charts look good.
         st.markdown("<br>", unsafe_allow_html=True)
-        st.subheader("📈 Visualization of Findings")
+        st.subheader("📈Visualization of Findings")
         st.markdown("---")
 
-        # Call the visualization function from MismatchMD1.py.
-        # This function returns a dictionary of Matplotlib Figure objects.
+        #Now, let's ask our artist function from MismatchMD1.py to create some awesome charts.
+        #This function will hand us back a collection of Matplotlib Figure objects.
         figures = visualize_symptom_analysis(results)
 
-        # Display the generated figures using st.pyplot().
-        # Each plot is checked to ensure it exists (is not None) before attempting to display.
+        #Time to show off our beautiful charts using st.pyplot()!
+        #We'll check each plot to make sure it actually exists before trying to display it.
         if figures.get("Google Keywords"):
-            st.markdown("#### Google Search Topic Keywords")
-            st.pyplot(figures["Google Keywords"]) # Display the bar plot for Google keywords.
+            st.markdown("####Google Search Topic Keywords")
+            st.pyplot(figures["Google Keywords"]) #Display the cool bar plot showing Google's topic keywords.
             st.markdown("---")
         else:
             st.info("Insufficient Google search data for keyword analysis.")
 
         if figures.get("PubMed Keywords"):
-            st.markdown("#### PubMed Medical Article Topic Keywords")
-            st.pyplot(figures["PubMed Keywords"]) # Display the bar plot for PubMed keywords.
+            st.markdown("####PubMed Medical Article Topic Keywords")
+            st.pyplot(figures["PubMed Keywords"]) #Display the fascinating bar plot for PubMed keywords.
             st.markdown("---")
         else:
             st.info("Insufficient PubMed data for keyword analysis.")
 
         if figures.get("Reliability Heatmap"):
-            st.markdown("#### Source Reliability Assessment")
-            st.pyplot(figures["Reliability Heatmap"]) # Display the heatmap for source reliability.
+            st.markdown("####Source Reliability Assessment")
+            st.pyplot(figures["Reliability Heatmap"]) #Display the colorful heatmap that shows how reliable our sources are.
             st.markdown("---")
         else:
             st.info("Insufficient data to generate reliability assessment heatmap.")
 
     else:
-        # If no results (text or plots) were found, display a warning.
+        #Uh oh, if we didn't find any results at all, let's let the user know gently.
         st.warning("No specific results found for this symptom. Please try a different symptom or consult a professional.")
 
 st.markdown("---")
-# Add a disclaimer at the bottom of the page.
+#Always good to add a little note at the bottom, just a friendly reminder.
 st.info("Disclaimer: This is a simple prototype for educational purposes and should not be used for medical advice.")
