@@ -1,4 +1,5 @@
 #app.py
+#To everyone reading this - this just makes the website work, I found a cool dude on YT that shows how to make streamlit websites look nicer - I might update this later if I have the time.
 import streamlit as st
 
 #Pull in the special tools we need from MismatchMD1.py.
